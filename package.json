@@ -1,0 +1,12 @@
+{
+  "name": "application-name",
+  "version": "0.0.1",
+  "dependencies": {
+    "express": "latest",
+    "ffmpeg": "0.0.4",
+    "fluent-ffmpeg": "latest",
+    "socket.io": "latest",
+    "thumbbot": "^0.4.1",
+    "node-uuid": "latest"
+  }
+}

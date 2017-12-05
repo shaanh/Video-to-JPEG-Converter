@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>Video Upload</title>
+    <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+    <script src="//code.jquery.com/jquery-1.11.2.min.js"></script>
+    <script>
+        window.addEventListener("load", Ready);
+
+        function Ready(){
+            if(window.File && window.FileReader){ //These are the relevant HTML5 objects that we are going to use
+                document.getElementById('UploadButton').addEventListener('click', StartUpload);
+                document.getElementById('FileBox').addEventListener('change', FileChosen);
+            }
+            else
+            {
+                document.getElementById('UploadArea').innerHTML = "Your Browser Doesn't Support The File API Please Update Your Browser";
+            }
+        }
+        var selectedFile;
+        function FileChosen(event) {
+            selectedFile = event.target.files[0];
+            document.getElementById('NameBox').value = selectedFile.name;
+        }
+        var socket = io.connect('http://localhost:5000');
+        var FReader;
+        var Name;
+        function StartUpload(){
+            if(document.getElementById('FileBox').value != "")
+            {
+                FReader = new FileReader();
+                Name = document.getElementById('NameBox').value;
+                var Content = "<span id='NameArea'>Uploading " + selectedFile.name + " as " + Name + "</span>";
+                Content += '<div id="ProgressContainer"><div id="ProgressBar"></div></div><span id="percent">0%</span>';
+                Content += "<span id='Uploaded'> - <span id='MB'>0</span>/" + Math.round(selectedFile.size / 1048576) + "MB</span>";
+                document.getElementById('UploadArea').innerHTML = Content;
+                FReader.onload = function(event){
+                    socket.emit('Upload', { 'Name' : Name, Data : event.target.result });
+                };
+                socket.emit('Start', { 'Name' : Name, 'Size' : selectedFile.size });
+            }
+            else
+            {
+                alert("Please Select A File");
+            }
+        }
+
+        socket.on('MoreData', function (data) {
+            UpdateBar(data['Percent']);
+            var Place = data['Place'] * 524288; //The Next Blocks Starting Position
+            var NewFile; //The Variable that will hold the new Block of Data
+            if (selectedFile.slice())
+                NewFile = selectedFile.slice(Place, Place + Math.min(524288, (selectedFile.size - Place)));
+            else
+                NewFile = selectedFile.slice()(Place, Place + Math.min(524288, (selectedFile.size - Place)));
+            FReader.readAsBinaryString(NewFile);
+        });
+
+        function UpdateBar(percent) {
+            document.getElementById('ProgressBar').style.width = percent + '%';
+            document.getElementById('percent').innerHTML = (Math.round(percent * 100) / 100) + '%';
+            var MBDone = Math.round(((percent / 100.0) * selectedFile.size) / 1048576);
+            document.getElementById('MB').innerHTML = MBDone;
+        }
+
+        var Path = 'http://localhost:5000/';
+        var img = {};
+        socket.on('Done', function (data){
+            setTimeout(function(){
+                if(data['Image1'])
+                    img['Image1'] = data['Image1'];
+                if(data['Image2'])
+                    img['Image2'] = data['Image2'];
+                if(data['Image3'])
+                    img['Image3'] = data['Image3'];
+                if(data['Image4'])
+                    img['Image4'] = data['Image4'];
+                if(data['Image5'])
+                    img['Image5'] = data['Image5'];
+                var Content = "Video Successfully Uploaded!";
+
+                Content += "<br><br><br><img id='Thumb' width='256' height='256' style='float: left' src='" + Path + img['Image1'] + "' alt='" + Name + "'>";
+                Content += "<img id='Thumb' width='256' height='256' src='" + Path + img['Image2'] + "' alt='" + Name + "'>";
+                Content += "<img id='Thumb' width='256' height='256' src='" + Path + img['Image3'] + "' alt='" + Name + "'>";
+                Content += "<img id='Thumb' width='256' height='256' src='" + Path + img['Image4'] + "' alt='" + Name + "'>";
+                Content += "<img id='Thumb' width='256' height='256' src='" + Path + img['Image5'] + "' alt='" + Name + "'>";
+                Content += "<br><button type='button' name='Upload' value='' id='Restart' class='Button'>Click To Upload Another</button>";
+                document.getElementById('UploadArea').innerHTML = Content;
+                var check = document.getElementById('Restart');
+                if (check) {
+                    check.addEventListener('click', Refresh);
+                }
+            },4000);
+
+        });
+
+        function Refresh(){
+            location.reload(true);
+        }
+
+    </script>
+<body>
+<div id="UploadBox">
+    <h1>Video to JPEG Converter</h1>
+        <span id='UploadArea'>
+            <label for="FileBox">Select A File: </label><input type="file" id="FileBox"><br>
+
+            <br>
+
+            <label for="NameBox">Name: </label><input type="text" id="NameBox"><br>
+
+            <br><br>
+            <button  type='button' id='UploadButton' class='Button'>Upload</button>
+
+        </span>
+</div>
+</body>
+</html>
